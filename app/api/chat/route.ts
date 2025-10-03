@@ -2,21 +2,32 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import { NextRequest, NextResponse } from "next/server"
 import fs from 'fs'
 import path from 'path'
+import * as pdf from 'pdf-parse'
 
 // Function to load personal context files
-function loadPersonalContext(): string {
+async function loadPersonalContext(): Promise<string> {
   try {
     const dataDir = path.join(process.cwd(), 'data', 'personal')
     let context = ''
     
-    // Read all text files in the personal directory
+    // Read all files in the personal directory
     if (fs.existsSync(dataDir)) {
       const files = fs.readdirSync(dataDir)
       for (const file of files) {
+        const filePath = path.join(dataDir, file)
+        
         if (file.endsWith('.txt')) {
-          const filePath = path.join(dataDir, file)
           const content = fs.readFileSync(filePath, 'utf-8')
           context += `\n\n${file.replace('.txt', '').toUpperCase()}:\n${content}`
+        } else if (file.endsWith('.pdf')) {
+          try {
+            const dataBuffer = fs.readFileSync(filePath)
+            const pdfData = await pdf(dataBuffer)
+            const fileName = file.replace('.pdf', '').toUpperCase()
+            context += `\n\n${fileName} (RESUME):\n${pdfData.text}`
+          } catch (pdfError) {
+            console.error(`Error parsing PDF ${file}:`, pdfError)
+          }
         }
       }
     }
@@ -59,7 +70,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Load personal context
-    const personalContext = loadPersonalContext()
+    const personalContext = await loadPersonalContext()
     
     // System prompt to customize AI personality
     const systemPrompt = `You are Shota from the hood - knowledgeable, helpful, but with a real edge. You know your stuff when it comes to coding, tech, and general topics. You can be witty and roast people when they deserve it, but you're still genuinely helpful. Keep it real, authentic, and don't be cringe. Be direct, sometimes sarcastic, but always useful. 
