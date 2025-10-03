@@ -2,58 +2,10 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import { NextRequest, NextResponse } from "next/server"
 import fs from 'fs'
 import path from 'path'
-import * as pdfParse from 'pdf-parse'
+// Note: PDF parsing removed due to serverless compatibility issues
+// Using text file approach instead which is more reliable
 
-// Function to extract key information from PDF text
-function extractKeyInfoFromPDF(pdfText: string): string {
-  const lines = pdfText.split('\n').filter(line => line.trim())
-  let keyInfo = ''
-  
-  // Look for experience section and extract first few jobs
-  const experienceIndex = lines.findIndex(line => 
-    line.toLowerCase().includes('experience')
-  )
-  
-  if (experienceIndex !== -1) {
-    keyInfo += 'EXPERIENCE:\n'
-    // Get next 20 lines after experience header
-    const experienceLines = lines.slice(experienceIndex + 1, experienceIndex + 21)
-    keyInfo += experienceLines.join('\n') + '\n\n'
-  }
-  
-  // Look for skills section
-  const skillsIndex = lines.findIndex(line => 
-    line.toLowerCase().includes('skill') || 
-    line.toLowerCase().includes('technology') ||
-    line.toLowerCase().includes('tech')
-  )
-  
-  if (skillsIndex !== -1) {
-    keyInfo += 'SKILLS:\n'
-    const skillsLines = lines.slice(skillsIndex + 1, skillsIndex + 15)
-    keyInfo += skillsLines.join('\n') + '\n\n'
-  }
-  
-  // Look for education section
-  const educationIndex = lines.findIndex(line => 
-    line.toLowerCase().includes('education') || 
-    line.toLowerCase().includes('university') ||
-    line.toLowerCase().includes('college')
-  )
-  
-  if (educationIndex !== -1) {
-    keyInfo += 'EDUCATION:\n'
-    const educationLines = lines.slice(educationIndex + 1, educationIndex + 10)
-    keyInfo += educationLines.join('\n') + '\n\n'
-  }
-  
-  // If no structured sections found, take first 1500 characters
-  if (!keyInfo) {
-    keyInfo = pdfText.substring(0, 1500) + '...'
-  }
-  
-  return keyInfo
-}
+// PDF parsing functions removed - using text file approach for better reliability
 
 // Function to load personal context files
 async function loadPersonalContext(): Promise<string> {
@@ -72,17 +24,8 @@ async function loadPersonalContext(): Promise<string> {
           const content = fs.readFileSync(filePath, 'utf-8')
           context += `\n\n${file.replace('.txt', '').toUpperCase()}:\n${content}`
         } else if (file.endsWith('.pdf')) {
-          try {
-            const dataBuffer = fs.readFileSync(filePath)
-            const pdfData = await pdfParse.pdf(dataBuffer)
-            const fileName = file.replace('.pdf', '').toUpperCase()
-            
-            // Extract key information from PDF instead of full text
-            const keyInfo = extractKeyInfoFromPDF(pdfData.text)
-            context += `\n\n${fileName} (RESUME):\n${keyInfo}`
-          } catch (pdfError) {
-            console.error(`Error parsing PDF ${file}:`, pdfError)
-          }
+          // PDF parsing disabled - using text file approach instead
+          console.log(`Skipping PDF file ${file} - use text file approach for better reliability`)
         }
       }
     }
