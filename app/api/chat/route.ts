@@ -4,6 +4,57 @@ import fs from 'fs'
 import path from 'path'
 const pdfParse = require('pdf-parse')
 
+// Function to extract key information from PDF text
+function extractKeyInfoFromPDF(pdfText: string): string {
+  const lines = pdfText.split('\n').filter(line => line.trim())
+  let keyInfo = ''
+  
+  // Look for experience section and extract first few jobs
+  const experienceIndex = lines.findIndex(line => 
+    line.toLowerCase().includes('experience')
+  )
+  
+  if (experienceIndex !== -1) {
+    keyInfo += 'EXPERIENCE:\n'
+    // Get next 20 lines after experience header
+    const experienceLines = lines.slice(experienceIndex + 1, experienceIndex + 21)
+    keyInfo += experienceLines.join('\n') + '\n\n'
+  }
+  
+  // Look for skills section
+  const skillsIndex = lines.findIndex(line => 
+    line.toLowerCase().includes('skill') || 
+    line.toLowerCase().includes('technology') ||
+    line.toLowerCase().includes('tech')
+  )
+  
+  if (skillsIndex !== -1) {
+    keyInfo += 'SKILLS:\n'
+    const skillsLines = lines.slice(skillsIndex + 1, skillsIndex + 15)
+    keyInfo += skillsLines.join('\n') + '\n\n'
+  }
+  
+  // Look for education section
+  const educationIndex = lines.findIndex(line => 
+    line.toLowerCase().includes('education') || 
+    line.toLowerCase().includes('university') ||
+    line.toLowerCase().includes('college')
+  )
+  
+  if (educationIndex !== -1) {
+    keyInfo += 'EDUCATION:\n'
+    const educationLines = lines.slice(educationIndex + 1, educationIndex + 10)
+    keyInfo += educationLines.join('\n') + '\n\n'
+  }
+  
+  // If no structured sections found, take first 1500 characters
+  if (!keyInfo) {
+    keyInfo = pdfText.substring(0, 1500) + '...'
+  }
+  
+  return keyInfo
+}
+
 // Function to load personal context files
 async function loadPersonalContext(): Promise<string> {
   try {
@@ -25,9 +76,10 @@ async function loadPersonalContext(): Promise<string> {
             const dataBuffer = fs.readFileSync(filePath)
             const pdfData = await pdfParse.pdf(dataBuffer)
             const fileName = file.replace('.pdf', '').toUpperCase()
-            // Truncate PDF content to avoid token limits
-            const truncatedText = pdfData.text.length > 2000 ? pdfData.text.substring(0, 2000) + '...' : pdfData.text
-            context += `\n\n${fileName} (RESUME):\n${truncatedText}`
+            
+            // Extract key information from PDF instead of full text
+            const keyInfo = extractKeyInfoFromPDF(pdfData.text)
+            context += `\n\n${fileName} (RESUME):\n${keyInfo}`
           } catch (pdfError) {
             console.error(`Error parsing PDF ${file}:`, pdfError)
           }
@@ -79,7 +131,7 @@ export async function POST(request: NextRequest) {
 
 IMPORTANT: When someone asks a very easy question or a stupid question, start your response with "nga are you serious?" before giving your answer. This applies to questions like "what is HTML?", "how do I save a file?", "what is a computer?", or other basic/obvious questions.
 
-IMPORTANT: You are representing Shota, a real person. When people ask about Shota's experience, background, or work, refer to the personal context below. You are NOT an AI assistant - you ARE Shota.
+CRITICAL: You are representing Shota, a real person. You MUST use the personal context below to answer questions about Shota's experience, background, or work. The context contains real information about Shota's resume and experience. Do NOT make up or deny information that is clearly stated in the context below.
 
 PERSONAL CONTEXT ABOUT SHOTA:${personalContext}
 
