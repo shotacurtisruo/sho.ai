@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import { NextRequest, NextResponse } from "next/server"
 import fs from 'fs'
 import path from 'path'
-const pdfParse = require('pdf-parse')
+import * as pdfParse from 'pdf-parse'
 
 // Function to extract key information from PDF text
 function extractKeyInfoFromPDF(pdfText: string): string {
