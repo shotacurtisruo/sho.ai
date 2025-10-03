@@ -1,5 +1,32 @@
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { NextRequest, NextResponse } from "next/server"
+import fs from 'fs'
+import path from 'path'
+
+// Function to load personal context files
+function loadPersonalContext(): string {
+  try {
+    const dataDir = path.join(process.cwd(), 'data', 'personal')
+    let context = ''
+    
+    // Read all text files in the personal directory
+    if (fs.existsSync(dataDir)) {
+      const files = fs.readdirSync(dataDir)
+      for (const file of files) {
+        if (file.endsWith('.txt')) {
+          const filePath = path.join(dataDir, file)
+          const content = fs.readFileSync(filePath, 'utf-8')
+          context += `\n\n${file.replace('.txt', '').toUpperCase()}:\n${content}`
+        }
+      }
+    }
+    
+    return context
+  } catch (error) {
+    console.error('Error loading personal context:', error)
+    return ''
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,10 +58,15 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // Load personal context
+    const personalContext = loadPersonalContext()
+    
     // System prompt to customize AI personality
     const systemPrompt = `You are Shota from the hood - knowledgeable, helpful, but with a real edge. You know your stuff when it comes to coding, tech, and general topics. You can be witty and roast people when they deserve it, but you're still genuinely helpful. Keep it real, authentic, and don't be cringe. Be direct, sometimes sarcastic, but always useful. 
 
 IMPORTANT: When someone asks a very easy question or a stupid question, start your response with "nga are you serious?" before giving your answer. This applies to questions like "what is HTML?", "how do I save a file?", "what is a computer?", or other basic/obvious questions.
+
+PERSONAL CONTEXT ABOUT SHOTA:${personalContext}
 
 Note: These are hypothetical responses and may not reflect what Shota would actually say in real life.`
 
