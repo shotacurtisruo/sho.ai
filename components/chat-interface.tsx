@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Send, Bot, User } from "lucide-react"
+import { Send, Bot, User, Copy, ThumbsUp, ThumbsDown, Linkedin, Instagram, Github } from "lucide-react"
 
 interface Message {
   role: "user" | "assistant"
@@ -65,84 +65,154 @@ export default function ChatInterface() {
     }
   }
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+  }
+
   return (
-    <Card className="w-full max-w-4xl h-[700px] flex flex-col bg-white/10 backdrop-blur-md border-white/20">
-      <CardHeader className="border-b border-white/20">
-        <CardTitle className="text-2xl font-bold text-white flex items-center gap-2">
-          <Bot className="w-8 h-8" />
-          AI Chat Assistant
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto p-6 space-y-4">
-        {messages.length === 0 && (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-white/60 text-lg">
-              Start a conversation with the AI assistant...
-            </p>
-          </div>
-        )}
+    <motion.div 
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 1.5, ease: "easeOut" }}
+      className="fixed bottom-32 left-1/2 transform -translate-x-1/2 w-full max-w-2xl z-40"
+    >
+      {/* Messages */}
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1.2, delay: 0.3, ease: "easeOut" }}
+        className="mb-4 space-y-4 max-h-[400px] overflow-y-auto"
+      >
+        
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`flex items-start gap-3 ${
+            className={`flex gap-3 ${
               message.role === "user" ? "justify-end" : "justify-start"
             }`}
           >
             {message.role === "assistant" && (
-              <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-5 h-5 text-white" />
+              <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-1">
+                <Bot className="w-4 h-4 text-primary" />
               </div>
             )}
-            <div
-              className={`max-w-[70%] rounded-lg p-4 ${
-                message.role === "user"
-                  ? "bg-purple-600 text-white"
-                  : "bg-white/20 text-white backdrop-blur-sm"
-              }`}
-            >
-              <p className="whitespace-pre-wrap">{message.content}</p>
+            
+            <div className={`max-w-[70%] ${message.role === "user" ? "order-first" : ""}`}>
+              <div
+                className={`rounded-2xl px-4 py-3 backdrop-blur-sm ${
+                  message.role === "user"
+                    ? "bg-primary/90 text-primary-foreground"
+                    : "bg-white/10 text-white border border-white/20"
+                }`}
+              >
+                <p className="whitespace-pre-wrap leading-relaxed text-sm">{message.content}</p>
+              </div>
+              
+              {message.role === "assistant" && (
+                <div className="flex items-center gap-1 mt-1 opacity-0 hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => copyToClipboard(message.content)}
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                    title="Copy"
+                  >
+                    <Copy className="w-3 h-3 text-white/70" />
+                  </button>
+                </div>
+              )}
             </div>
+            
             {message.role === "user" && (
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                <User className="w-5 h-5 text-white" />
+              <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 mt-1">
+                <User className="w-4 h-4 text-white" />
               </div>
             )}
           </div>
         ))}
+        
         {loading && (
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
-              <Bot className="w-5 h-5 text-white" />
+          <div className="flex gap-3">
+            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-1">
+              <Bot className="w-4 h-4 text-primary" />
             </div>
-            <div className="bg-white/20 text-white backdrop-blur-sm rounded-lg p-4">
+            <div className="bg-white/10 border border-white/20 rounded-2xl px-4 py-3 backdrop-blur-sm">
               <div className="flex gap-1">
-                <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                <span className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
-      </CardContent>
-      <form onSubmit={handleSubmit} className="p-6 border-t border-white/20">
-        <div className="flex gap-2">
+      </motion.div>
+
+      {/* Input */}
+      <motion.form 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1.2, delay: 0.6, ease: "easeOut" }}
+        onSubmit={handleSubmit} 
+        className="flex gap-3 mb-4"
+      >
+        <div className="flex-1 relative">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
+            placeholder="Ask anything..."
             disabled={loading}
-            className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+            className="w-full pr-12 py-3 border border-white/20 rounded-full focus:border-white/40 focus:ring-1 focus:ring-white/20 bg-white/10 text-white placeholder:text-white/60 backdrop-blur-sm"
           />
-          <Button
-            type="submit"
-            disabled={loading || !input.trim()}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
         </div>
-      </form>
-    </Card>
+        <Button
+          type="submit"
+          disabled={loading || !input.trim()}
+          className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full w-12 h-12 p-0 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
+        >
+          <Send className="w-5 h-5" />
+        </Button>
+      </motion.form>
+
+      {/* Social Media Icons */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1.2, delay: 0.9, ease: "easeOut" }}
+        className="flex justify-center gap-4"
+      >
+        <motion.a 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 1.0 }}
+          href="https://www.linkedin.com/in/shota-ruo-1869b7244/" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors backdrop-blur-sm border border-white/20"
+        >
+          <Linkedin className="w-5 h-5 text-white" />
+        </motion.a>
+        <motion.a 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 1.1 }}
+          href="https://www.instagram.com/shota_ruo/?next=%2F" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors backdrop-blur-sm border border-white/20"
+        >
+          <Instagram className="w-5 h-5 text-white" />
+        </motion.a>
+        <motion.a 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 1.2 }}
+          href="https://github.com/shotacurtisruo" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors backdrop-blur-sm border border-white/20"
+        >
+          <Github className="w-5 h-5 text-white" />
+        </motion.a>
+      </motion.div>
+    </motion.div>
   )
 }
