@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Send, Bot, User, Copy, ThumbsUp, ThumbsDown, Linkedin, Instagram, Github } from "lucide-react"
+import { Send, Bot, User, Copy, Linkedin, Instagram, Github } from "lucide-react"
 
 interface Message {
   role: "user" | "assistant"

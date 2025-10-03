@@ -11,7 +11,6 @@ export default function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
   const [showContent, setShowContent] = useState(false)
   const [answer, setAnswer] = useState("")
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null)
-  const [showQuiz, setShowQuiz] = useState(false)
 
   useEffect(() => {
     // Fade in the welcome text after a short delay
@@ -155,7 +154,7 @@ export default function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
                   textShadow: "0 0 15px rgba(248, 113, 113, 0.6)"
                 }}
               >
-                uh uh that ain't my middle name
+                uh uh that ain&apos;t my middle name
               </motion.div>
             )}
           </AnimatePresence>
