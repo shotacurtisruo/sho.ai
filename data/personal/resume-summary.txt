@@ -1,0 +1,19 @@
+RESUME SUMMARY:
+
+EXPERIENCE:
+- Narb | Remote - Software Engineering Intern | 06/2025 - Present
+  Led development and maintenance of narb.cc web platform
+  Architected frontend using ReactJS and modern JavaScript (ES6+)
+  Managed full site revamp with performance optimization and responsive design
+  Directed version control workflows with Git
+
+SKILLS:
+- Frontend: React, Next.js, TypeScript, JavaScript (ES6+)
+- Backend: Node.js, API development
+- Tools: Git, version control, performance optimization
+- Web: Responsive design, user experience optimization
+
+EDUCATION:
+- Full-stack developer with focus on modern web technologies
+- Experience with AI and machine learning integration
+- Building innovative web applications and AI chatbots
