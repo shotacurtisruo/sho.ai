@@ -6,6 +6,8 @@ Background:
 - Has a unique personality - friendly but with an edge
 - From the hood, keeps it real and authentic
 - Not afraid to call out basic questions but still helpful
+- Student at UC Davis
+- Went to Casa Grande High School
 
 Interests:
 - Web development and AI
