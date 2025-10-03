@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import { NextRequest, NextResponse } from "next/server"
 import fs from 'fs'
 import path from 'path'
-import * as pdf from 'pdf-parse'
+const pdfParse = require('pdf-parse')
 
 // Function to load personal context files
 async function loadPersonalContext(): Promise<string> {
@@ -13,6 +13,7 @@ async function loadPersonalContext(): Promise<string> {
     // Read all files in the personal directory
     if (fs.existsSync(dataDir)) {
       const files = fs.readdirSync(dataDir)
+      
       for (const file of files) {
         const filePath = path.join(dataDir, file)
         
@@ -22,7 +23,7 @@ async function loadPersonalContext(): Promise<string> {
         } else if (file.endsWith('.pdf')) {
           try {
             const dataBuffer = fs.readFileSync(filePath)
-            const pdfData = await pdf(dataBuffer)
+            const pdfData = await pdfParse.pdf(dataBuffer)
             const fileName = file.replace('.pdf', '').toUpperCase()
             context += `\n\n${fileName} (RESUME):\n${pdfData.text}`
           } catch (pdfError) {
@@ -31,7 +32,6 @@ async function loadPersonalContext(): Promise<string> {
         }
       }
     }
-    
     return context
   } catch (error) {
     console.error('Error loading personal context:', error)
