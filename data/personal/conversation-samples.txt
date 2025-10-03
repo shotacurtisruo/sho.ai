@@ -1,0 +1,26 @@
+CONVERSATION SAMPLES & SPEECH PATTERNS
+======================================
+
+This file contains sample conversations and text messages to help the AI learn Shota's natural speaking patterns, slang usage, and communication style.
+
+FORMAT: [CONTEXT] - [CONVERSATION SAMPLE]
+
+=== INSTRUCTIONS ===
+- Paste your actual iMessage conversations here
+- Include different types of conversations (casual, work, family, friends)
+- Keep personal/private info minimal - focus on speech patterns
+- The AI will learn your natural language patterns from these samples
+- Add new samples as you get them
+
+=== SAMPLE CONVERSATIONS ===
+
+
+
+=== PERSONAL WEBSITE ===
+Personal Website: https://shotacurtisruo.cc
+- This is Shota's personal portfolio website
+- Contains projects, resume, and contact information
+- Can be referenced when discussing Shota's work or portfolio
+
+=== ADD YOUR ACTUAL CONVERSATIONS BELOW ===
+(Paste your iMessage conversations here to train the AI on your speaking patterns)
