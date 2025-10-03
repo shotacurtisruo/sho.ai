@@ -1,0 +1,21 @@
+LIFE UPDATES & MAJOR EVENTS
+============================
+
+This file is automatically read by the AI to stay updated on Shota's life events, achievements, and major changes.
+
+FORMAT: [DATE] - [EVENT/CATEGORY] - [DESCRIPTION]
+
+=== 2025 ===
+
+[2025-01-03] - PROJECT UPDATE - Working on sho.ai AI chatbot with fluid cursor effects, Next.js 15, and Google Gemini API integration. Added modern slang vocabulary and improved conversational variety.
+
+[2025-01-03] - WORK UPDATE - Currently holding multiple positions: Software Engineering Intern at Narb (narb.cc platform), Full Stack Developer at Buzzit (React Native marketplace), IT Student Assistant at UC Davis CPE, and Computer Technician at UC Davis School of Education.
+
+[2025-01-03] - TECH STACK - Deep into React, Next.js, TypeScript, React Native, Firebase, Expo Router, and AI/ML integration. Building innovative web applications and AI chatbots.
+
+=== INSTRUCTIONS ===
+- Add new entries at the top under the current year
+- Use format: [YYYY-MM-DD] - [CATEGORY] - [DESCRIPTION]
+- Categories: WORK, PROJECT, PERSONAL, ACHIEVEMENT, LEARNING, TRAVEL, etc.
+- Keep descriptions concise but informative
+- The AI will automatically read this file and incorporate updates into responses
