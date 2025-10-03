@@ -171,7 +171,7 @@ export default function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
                   textShadow: "0 0 20px rgba(74, 222, 128, 0.8)"
                 }}
               >
-                🎉 Correct! Welcome to my world... 🎉
+                     🎉 good shit. you know me well. 🎉
               </motion.div>
             )}
           </AnimatePresence>
