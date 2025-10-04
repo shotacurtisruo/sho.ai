@@ -1298,12 +1298,12 @@ export default function SplashCursor({
       <canvas
         ref={canvasRef}
         id="fluid"
-        style={{
+            style={{
           width: '100vw',
           height: '100vh',
           display: 'block'
-        }}
-      />
+            }}
+          />
     </div>
   );
 }

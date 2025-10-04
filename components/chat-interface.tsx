@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Send, Bot, User, Copy, Linkedin, Instagram, Github } from "lucide-react"
+import { Send, User, Copy, Linkedin, Instagram, Github } from "lucide-react"
+import Image from "next/image"
 
 interface Message {
   role: "user" | "assistant"
@@ -74,14 +75,14 @@ export default function ChatInterface() {
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 1.5, ease: "easeOut" }}
-      className="fixed bottom-32 left-1/2 transform -translate-x-1/2 w-full max-w-2xl z-[55]"
+      className="fixed bottom-4 sm:bottom-8 md:bottom-12 lg:bottom-16 xl:bottom-20 left-1/2 transform -translate-x-1/2 w-[95%] sm:w-[90%] md:w-[85%] lg:w-[80%] xl:w-[70%] max-w-2xl z-[55]"
     >
       {/* Messages */}
       <motion.div 
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1.2, delay: 0.3, ease: "easeOut" }}
-        className="mb-4 space-y-4 max-h-[400px] overflow-y-auto"
+        className="mb-4 space-y-4 max-h-[80vh] overflow-y-auto"
       >
         
         {messages.map((message, index) => (
@@ -92,8 +93,14 @@ export default function ChatInterface() {
             }`}
           >
             {message.role === "assistant" && (
-              <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-1">
-                <Bot className="w-4 h-4 text-primary" />
+              <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 mt-1">
+                <Image
+                  src="/pfp.jpg"
+                  alt="Shota"
+                  width={24}
+                  height={24}
+                  className="w-full h-full object-cover"
+                />
               </div>
             )}
             
@@ -131,8 +138,14 @@ export default function ChatInterface() {
         
         {loading && (
           <div className="flex gap-3">
-            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-1">
-              <Bot className="w-4 h-4 text-primary" />
+            <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 mt-1">
+              <Image
+                src="/pfp.jpg"
+                alt="Shota"
+                width={24}
+                height={24}
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="bg-white/10 border border-white/20 rounded-2xl px-4 py-3 backdrop-blur-sm">
               <div className="flex gap-1">
