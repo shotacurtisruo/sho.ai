@@ -106,7 +106,7 @@ export default function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
                     textShadow: "0 0 15px rgba(255, 255, 255, 0.4)"
                   }}
                 >
-                  What is my dog's name?
+                  What is my dog&apos;s name?
                 </motion.p>
 
                 <motion.form
