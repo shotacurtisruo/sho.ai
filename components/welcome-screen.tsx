@@ -23,7 +23,7 @@ export default function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const correctAnswers = ["curtis", "Curtis"] // Accept both cases
+    const correctAnswers = ["elsie", "Elsie"] // Accept both cases
     const userAnswer = answer.trim()
     
     if (correctAnswers.includes(userAnswer)) {
@@ -106,7 +106,7 @@ export default function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
                     textShadow: "0 0 15px rgba(255, 255, 255, 0.4)"
                   }}
                 >
-                  What is my middle name?
+                  What is my dog's name?
                 </motion.p>
 
                 <motion.form
@@ -120,7 +120,7 @@ export default function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
                     type="text"
                     value={answer}
                     onChange={(e) => setAnswer(e.target.value)}
-                    placeholder="Enter my middle name..."
+                    placeholder="Enter my dog's name..."
                     className="px-4 sm:px-6 py-3 sm:py-4 text-base sm:text-lg bg-white/10 border border-white/20 rounded-full text-white placeholder:text-white/60 backdrop-blur-sm focus:outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20 w-72 sm:w-80 text-center"
                     style={{
                       textShadow: "0 0 10px rgba(255, 255, 255, 0.3)"
@@ -154,7 +154,7 @@ export default function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
                   textShadow: "0 0 15px rgba(248, 113, 113, 0.6)"
                 }}
               >
-                uh uh that ain&apos;t my middle name
+                uh uh that ain&apos;t my dog&apos;s name
               </motion.div>
             )}
           </AnimatePresence>
