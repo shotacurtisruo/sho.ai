@@ -5,7 +5,7 @@ Background:
 - Loves working with cutting-edge technologies
 - Has a unique personality - friendly and informative and polite
 - Very Straight to the point
-- Student at UC Davis
+- Student at UC Davis studying Statistical Data Science
 - Went to Casa Grande High School
 
 Interests:

@@ -1,109 +1,145 @@
 import { GoogleGenerativeAI } from "@google/generative-ai"
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import fs from 'fs'
 import path from 'path'
-// Note: PDF parsing removed due to serverless compatibility issues
-// Using text file approach instead which is more reliable
 
-// PDF parsing functions removed - using text file approach for better reliability
+const MODEL_NAME = "gemini-2.5-flash"
+const RETRIABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504])
 
-// Function to load personal context files
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function getErrorStatus(error: unknown): number | null {
+  if (typeof error === "object" && error !== null && "status" in error) {
+    const status = (error as { status?: unknown }).status
+    if (typeof status === "number") return status
+  }
+  if (error instanceof Error) {
+    const match = error.message.match(/\[(\d{3})\s/)
+    if (match) return Number(match[1])
+  }
+  return null
+}
+
 async function loadPersonalContext(): Promise<string> {
   try {
     const dataDir = path.join(process.cwd(), 'data', 'personal')
+    if (!fs.existsSync(dataDir)) return ''
+
     let context = ''
-    
-    // Read all files in the personal directory
-    if (fs.existsSync(dataDir)) {
-      const files = fs.readdirSync(dataDir)
-      
-      for (const file of files) {
-        const filePath = path.join(dataDir, file)
-        
-        if (file.endsWith('.txt')) {
-          const content = fs.readFileSync(filePath, 'utf-8')
-          context += `\n\n${file.replace('.txt', '').toUpperCase()}:\n${content}`
-        } else if (file.endsWith('.pdf')) {
-          // PDF parsing disabled - using text file approach instead
-          console.log(`Skipping PDF file ${file} - use text file approach for better reliability`)
-        }
+    const files = fs.readdirSync(dataDir)
+    for (const file of files) {
+      if (file.endsWith('.txt')) {
+        const content = fs.readFileSync(path.join(dataDir, file), 'utf-8')
+        context += `\n\n${file.replace('.txt', '').toUpperCase()}:\n${content}`
       }
     }
     return context
-  } catch (error) {
-    console.error('Error loading personal context:', error)
+  } catch {
     return ''
   }
 }
 
+interface ChatMessage {
+  role: "user" | "assistant"
+  content: string
+}
+
+function jsonError(message: string, status: number) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { message } = await request.json()
+    const body = await request.json()
+    const message: string = body.message
+    const history: ChatMessage[] = body.history ?? []
 
-    if (!message) {
-      return NextResponse.json(
-        { error: "Message is required" },
-        { status: 400 }
-      )
+    if (!message?.trim()) {
+      return jsonError("Message is required", 400)
     }
 
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "GEMINI_API_KEY is not configured. Please add it to your .env.local file." },
-        { status: 500 }
-      )
+      return jsonError("GEMINI_API_KEY is not configured", 500)
     }
 
+    const personalContext = await loadPersonalContext()
+
+    const systemPrompt = `You are an AI version of Shota Ruo — a software engineer and data scientist. You are the chatbot on Shota's personal portfolio site.
+
+Personality: Direct, thoughtful, and genuinely helpful. You're warm and approachable without being over-the-top. You know your way around code, data science, and technology. You speak naturally — not overly formal, not slang-heavy.
+
+Guidelines:
+- For questions about Shota's background, projects, or experience: use ONLY the personal context provided below. Never fabricate details.
+- For general technical questions or conversation: respond naturally and helpfully.
+- Format responses clearly using markdown: code blocks, lists, and bold text where they improve readability.
+- Keep responses concise and to the point.
+
+PERSONAL CONTEXT:${personalContext}`
+
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash",
+    const model = genAI.getGenerativeModel({
+      model: MODEL_NAME,
+      systemInstruction: systemPrompt,
       generationConfig: {
-        temperature: 0.9, // Balanced creativity while maintaining respectful tone
-        topP: 0.9,        // Maintain coherence
-        topK: 40,         // Balanced word choices
+        temperature: 0.8,
+        topP: 0.9,
+        topK: 40,
         maxOutputTokens: 1024,
-      }
+      },
     })
 
-    // Load personal context
-    const personalContext = await loadPersonalContext()
-    
-    // System prompt to customize AI personality
-    const systemPrompt = `You are Shota - knowledgeable, helpful, and genuinely respectful. You know your stuff when it comes to coding, tech, and general topics. You are always kind, professional, and treat everyone with respect and dignity. Be warm, friendly, and approachable in all your interactions. 
+    const geminiHistory = history.map((m) => ({
+      role: m.role === 'assistant' ? 'model' as const : 'user' as const,
+      parts: [{ text: m.content }],
+    }))
 
-CONVERSATION STYLE - AVOID REPETITION:
-- NEVER use the same opening phrase twice in a row
-- NEVER repeat the same sentence structure or patterns
-- Vary your language constantly - use different words, phrases, and expressions
-- Be conversational and natural, like talking to a friend
-- Ask follow-up questions when appropriate
-- Show genuine interest in what people are saying
-- Always be polite, respectful, and considerate
-- Use a warm, friendly tone that makes people feel comfortable
-- Mix up your sentence structures and lengths - sometimes short, sometimes longer
-- Be helpful and encouraging in your responses
-- Express appreciation when appropriate
-- Always maintain a respectful and professional demeanor
+    let lastError: unknown = null
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      try {
+        const chat = model.startChat({ history: geminiHistory })
+        const result = await chat.sendMessageStream(message)
 
-IMPORTANT: Always be respectful and kind, regardless of the question asked. Treat every question with dignity and provide helpful, thoughtful responses. Never be condescending, sarcastic, or dismissive.
+        const stream = new ReadableStream({
+          async start(controller) {
+            try {
+              for await (const chunk of result.stream) {
+                const text = chunk.text()
+                if (text) controller.enqueue(new TextEncoder().encode(text))
+              }
+              controller.close()
+            } catch (err) {
+              controller.error(err)
+            }
+          },
+        })
 
-CRITICAL: You are representing Shota, a real person. You MUST use the personal context below to answer questions about Shota's experience, background, or work. The context contains real information about Shota's resume and experience. Do NOT make up or deny information that is clearly stated in the context below.
+        return new Response(stream, {
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        })
+      } catch (error) {
+        lastError = error
+        const status = getErrorStatus(error)
+        const isRetriable = status !== null && RETRIABLE_STATUS_CODES.has(status)
+        if (isRetriable && attempt < 2) {
+          await sleep(500 * (attempt + 1))
+          continue
+        }
+        break
+      }
+    }
 
-PERSONAL CONTEXT ABOUT SHOTA:${personalContext}
-
-Note: These are hypothetical responses and may not reflect what Shota would actually say in real life.`
-
-    const result = await model.generateContent([systemPrompt, message])
-    const response = await result.response
-    const text = response.text()
-
-    return NextResponse.json({ response: text })
+    throw lastError ?? new Error("Failed to generate response")
   } catch (error) {
-    console.error("Error:", error)
-    return NextResponse.json(
-      { error: "Failed to generate response" },
-      { status: 500 }
-    )
+    console.error("Chat error:", error)
+    const status = getErrorStatus(error)
+    if (status === 429 || status === 503) {
+      return jsonError("Model is busy. Please try again in a few seconds.", status)
+    }
+    const msg = error instanceof Error ? error.message : "Failed to generate response"
+    return jsonError(msg, status ?? 500)
   }
 }

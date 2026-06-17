@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Send, User, Copy, Plus, MessageSquare } from "lucide-react"
 import Image from "next/image"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface Message {
   role: "user" | "assistant"
@@ -30,30 +32,44 @@ const getChatTitle = (content: string): string => {
   return trimmed.length > 28 ? `${trimmed.slice(0, 28)}...` : trimmed
 }
 
-const initialSession = createChatSession()
+const STORAGE_KEY = "sho-ai-sessions"
+
+function loadSessions(): ChatSession[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved) as ChatSession[]
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
+  } catch {}
+  return [createChatSession()]
+}
 
 export default function ChatInterface() {
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([initialSession])
-  const [activeChatId, setActiveChatId] = useState<string>(initialSession.id)
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([createChatSession()])
+  const [activeChatId, setActiveChatId] = useState<string>("")
   const [input, setInput] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isStreaming, setIsStreaming] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const activeChat = chatSessions.find((session) => session.id === activeChatId) ?? chatSessions[0]
+  const activeChat = chatSessions.find((s) => s.id === activeChatId) ?? chatSessions[0]
   const activeMessages = activeChat?.messages ?? []
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+  useEffect(() => {
+    const sessions = loadSessions()
+    setChatSessions(sessions)
+    setActiveChatId(sessions[0].id)
+  }, [])
 
   useEffect(() => {
-    scrollToBottom()
-  }, [activeMessages, loading])
-
-  useEffect(() => {
-    if (!activeChatId && chatSessions.length > 0) {
-      setActiveChatId(chatSessions[0].id)
+    if (chatSessions.length > 0 && activeChatId) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(chatSessions))
     }
-  }, [activeChatId, chatSessions])
+  }, [chatSessions, activeChatId])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [activeMessages, isLoading])
 
   const createNewChat = () => {
     const newSession = createChatSession()
@@ -65,12 +81,15 @@ export default function ChatInterface() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const messageText = input.trim()
-    if (!messageText || loading || !activeChatId) return
+    if (!messageText || isLoading || isStreaming || !activeChatId) return
+
+    const currentChatId = activeChatId
+    const historySnapshot = [...activeMessages]
 
     const userMessage: Message = { role: "user", content: messageText }
     setChatSessions((prev) =>
       prev.map((session) =>
-        session.id === activeChatId
+        session.id === currentChatId
           ? {
               ...session,
               title: session.messages.length === 0 ? getChatTitle(messageText) : session.title,
@@ -80,67 +99,85 @@ export default function ChatInterface() {
       )
     )
     setInput("")
-    setLoading(true)
+    setIsLoading(true)
 
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message: messageText }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: messageText, history: historySnapshot }),
       })
 
-      if (!response.ok) {
-        let errorMessage = "Failed to get response"
+      if (!response.ok || !response.body) {
+        let errorMessage = "Failed to get a response. Please try again."
         try {
           const errorData = await response.json()
-          if (typeof errorData?.error === "string" && errorData.error.trim()) {
-            errorMessage = errorData.error
-          }
-        } catch {
-          // Ignore JSON parse failures and use fallback message.
-        }
-        throw new Error(errorMessage)
+          if (typeof errorData?.error === "string") errorMessage = errorData.error
+        } catch {}
+        setChatSessions((prev) =>
+          prev.map((session) =>
+            session.id === currentChatId
+              ? { ...session, messages: [...session.messages, { role: "assistant", content: errorMessage }] }
+              : session
+          )
+        )
+        return
       }
 
-      const data = await response.json()
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: data.response,
-      }
       setChatSessions((prev) =>
         prev.map((session) =>
-          session.id === activeChatId
-            ? { ...session, messages: [...session.messages, assistantMessage] }
+          session.id === currentChatId
+            ? { ...session, messages: [...session.messages, { role: "assistant", content: "" }] }
             : session
         )
       )
+      setIsLoading(false)
+      setIsStreaming(true)
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let fullContent = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        fullContent += decoder.decode(value, { stream: true })
+        const snapshot = fullContent
+        setChatSessions((prev) =>
+          prev.map((session) => {
+            if (session.id !== currentChatId) return session
+            const msgs = [...session.messages]
+            msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content: snapshot }
+            return { ...session, messages: msgs }
+          })
+        )
+      }
     } catch (error) {
       console.error("Error:", error)
-      const message =
-        error instanceof Error && error.message
-          ? error.message
-          : "Sorry, I encountered an error. Please try again."
-      const errorMessage: Message = {
-        role: "assistant",
-        content: message,
-      }
+      const msg = error instanceof Error ? error.message : "Something went wrong. Please try again."
       setChatSessions((prev) =>
-        prev.map((session) =>
-          session.id === activeChatId
-            ? { ...session, messages: [...session.messages, errorMessage] }
-            : session
-        )
+        prev.map((session) => {
+          if (session.id !== currentChatId) return session
+          const msgs = [...session.messages]
+          if (msgs[msgs.length - 1]?.role === "assistant" && msgs[msgs.length - 1].content === "") {
+            msgs[msgs.length - 1] = { role: "assistant", content: msg }
+          } else {
+            msgs.push({ role: "assistant", content: msg })
+          }
+          return { ...session, messages: msgs }
+        })
       )
     } finally {
-      setLoading(false)
+      setIsLoading(false)
+      setIsStreaming(false)
     }
   }
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
   }
+
+  const isBusy = isLoading || isStreaming
 
   return (
     <motion.div
@@ -202,74 +239,76 @@ export default function ChatInterface() {
             className="flex-1 overflow-y-auto"
           >
             <div className="mx-auto w-full max-w-3xl px-4 py-6">
-              {activeMessages.length === 0 && (
+              {activeMessages.length === 0 && !isLoading && (
                 <div className="mt-24 text-center text-white/60">
                   <p className="text-2xl font-medium text-white/80">How can I help you today?</p>
                 </div>
               )}
 
               <div className="space-y-8">
-                {activeMessages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`flex gap-3 ${
-                      message.role === "user" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    {message.role === "assistant" && (
-                      <div className="mt-1 h-7 w-7 flex-shrink-0 overflow-hidden rounded-full">
-                        <Image
-                          src="/pfp.jpg"
-                          alt="Shota"
-                          width={28}
-                          height={28}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                    )}
+                {activeMessages.map((message, index) => {
+                  const isLastMessage = index === activeMessages.length - 1
+                  const showCursor = isStreaming && isLastMessage && message.role === "assistant"
 
-                    <div className={`max-w-[85%] ${message.role === "user" ? "order-first" : ""}`}>
-                      <div
-                        className={`rounded-3xl px-4 py-3 ${
-                          message.role === "user"
-                            ? "bg-[#2f2f2f] text-white"
-                            : "bg-transparent text-white"
-                        }`}
-                      >
-                        <p className="whitespace-pre-wrap text-[15px] leading-7">{message.content}</p>
-                      </div>
-
+                  return (
+                    <div
+                      key={index}
+                      className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
                       {message.role === "assistant" && (
-                        <div className="mt-1 flex items-center gap-1 opacity-0 transition-opacity hover:opacity-100">
-                          <button
-                            onClick={() => copyToClipboard(message.content)}
-                            className="rounded p-1 transition-colors hover:bg-white/10"
-                            title="Copy"
-                          >
-                            <Copy className="h-3 w-3 text-white/70" />
-                          </button>
+                        <div className="mt-1 h-7 w-7 flex-shrink-0 overflow-hidden rounded-full">
+                          <Image src="/pfp.jpg" alt="Shota" width={28} height={28} className="h-full w-full object-cover" />
+                        </div>
+                      )}
+
+                      <div className={`max-w-[85%] group ${message.role === "user" ? "order-first" : ""}`}>
+                        <div
+                          className={`rounded-3xl px-4 py-3 ${
+                            message.role === "user"
+                              ? "bg-[#2f2f2f] text-white"
+                              : "bg-transparent text-white"
+                          }`}
+                        >
+                          {message.role === "user" ? (
+                            <p className="whitespace-pre-wrap text-[15px] leading-7">{message.content}</p>
+                          ) : (
+                            <div className="text-[15px] leading-7 [&>*:last-child]:mb-0 [&>p]:mb-3 [&>ul]:mb-3 [&>ol]:mb-3 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4 [&>ul>li]:mb-1 [&>ol>li]:mb-1 [&_strong]:font-semibold [&_strong]:text-white [&_a]:text-blue-400 [&_a]:underline-offset-2 [&_a]:hover:underline [&_pre]:rounded-lg [&_pre]:bg-white/10 [&_pre]:p-3 [&_pre]:overflow-x-auto [&_pre]:my-2 [&_pre]:text-sm [&_code:not(pre_code)]:rounded [&_code:not(pre_code)]:bg-white/15 [&_code:not(pre_code)]:px-1.5 [&_code:not(pre_code)]:py-0.5 [&_code:not(pre_code)]:text-[13px] [&_code:not(pre_code)]:font-mono [&_pre_code]:font-mono [&_pre_code]:text-sm [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:font-semibold [&>h3]:mb-1">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {message.content}
+                              </ReactMarkdown>
+                              {showCursor && (
+                                <span className="inline-block w-[2px] h-[1em] bg-white/70 animate-pulse ml-0.5 align-middle" />
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {message.role === "assistant" && message.content && !showCursor && (
+                          <div className="mt-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                            <button
+                              onClick={() => copyToClipboard(message.content)}
+                              className="rounded p-1 transition-colors hover:bg-white/10"
+                              title="Copy"
+                            >
+                              <Copy className="h-3 w-3 text-white/70" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {message.role === "user" && (
+                        <div className="mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#2f2f2f]">
+                          <User className="h-4 w-4 text-white" />
                         </div>
                       )}
                     </div>
+                  )
+                })}
 
-                    {message.role === "user" && (
-                      <div className="mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#2f2f2f]">
-                        <User className="h-4 w-4 text-white" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {loading && (
+                {isLoading && (
                   <div className="flex gap-3">
                     <div className="mt-1 h-7 w-7 flex-shrink-0 overflow-hidden rounded-full">
-                      <Image
-                        src="/pfp.jpg"
-                        alt="Shota"
-                        width={28}
-                        height={28}
-                        className="h-full w-full object-cover"
-                      />
+                      <Image src="/pfp.jpg" alt="Shota" width={28} height={28} className="h-full w-full object-cover" />
                     </div>
                     <div className="rounded-2xl bg-[#2a2a2a] px-4 py-3">
                       <div className="flex gap-1">
@@ -298,12 +337,12 @@ export default function ChatInterface() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Message Shota AI"
-                disabled={loading}
+                disabled={isBusy}
                 className="h-11 border-none bg-transparent text-white placeholder:text-white/60 focus-visible:ring-0"
               />
               <Button
                 type="submit"
-                disabled={loading || !input.trim()}
+                disabled={isBusy || !input.trim()}
                 className="h-10 w-10 rounded-full bg-white/90 p-0 text-black hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Send className="h-4 w-4" />

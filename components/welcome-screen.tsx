@@ -23,10 +23,7 @@ export default function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const correctAnswers = ["elsie", "Elsie"] // Accept both cases
-    const userAnswer = answer.trim()
-    
-    if (correctAnswers.includes(userAnswer)) {
+    if (answer.trim().toLowerCase() === "elsie") {
       setIsCorrect(true)
       // Slower fade out and show chatbot after a longer delay
       setTimeout(() => {
